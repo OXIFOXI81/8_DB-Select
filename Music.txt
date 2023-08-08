@@ -1,0 +1,197 @@
+CREATE TABLE IF NOT EXISTS Performers (
+	performer_id SERIAL PRIMARY KEY,
+	name VARCHAR(40) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Albums (
+	album_id SERIAL PRIMARY KEY,
+	album_name VARCHAR(60) NOT NULL,
+	albu_year  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Album_performer (
+	album_id INTEGER NOT NULL REFERENCES Albums(album_id),
+	performer_id INTEGER NOT NULL REFERENCES Performers(performer_id),
+	CONSTRAINT gp_ap PRIMARY KEY (album_id,performer_id)
+	
+);
+
+
+CREATE TABLE IF NOT EXISTS __Music_genres (
+	genre_id SERIAL PRIMARY KEY,
+	genre_name VARCHAR(20) NOT NULL
+);
+
+
+
+CREATE TABLE IF NOT EXISTS __Genre_performer (
+	genre_id INTEGER NOT NULL REFERENCES Music_genres(genre_id),
+	performer_id INTEGER NOT NULL REFERENCES Performers(performer_id),
+	CONSTRAINT gp_id PRIMARY KEY (genre_id,performer_id)
+);
+
+CREATE TABLE IF NOT EXISTS _Tracklist (
+	track_id SERIAL PRIMARY KEY,
+	track_name VARCHAR(60) NOT NULL,
+	album_id INTEGER NOT NULL REFERENCES Albums(album_id),
+	duration NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS __Collections (
+	collection_id SERIAL PRIMARY KEY,
+	collection_name VARCHAR(60) NOT NULL,
+	collection_year INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS __Collection_track (
+	collection_id INTEGER NOT NULL REFERENCES __Collections(collection_id),
+	track_id INTEGER NOT NULL REFERENCES __Tracklist(track_id),
+	CONSTRAINT ct_id1 PRIMARY KEY (collection_id, track_id));
+	
+
+
+
+
+
+
+INSERT INTO "__Performers"
+ (performer_id, name) VALUES
+(1, 'Анна Нетребко'),
+ (2, 'Елена Ваенга'),
+(3, 'Леонид Агутин'),
+(4, 'Лариса Долина'),
+ (5, 'Полина Гагарина');
+
+INSERT INTO "__Albums"
+(album_id, album_name, albu_year) VALUES
+(1, 'The Russian album', 2017),
+ (2, 'Лена', 2012),
+ (3, 'Larisa', 2012),
+ (4, 'Вдох', 2022),
+ (5, 'Босоногий мальчик', 1994);
+
+INSERT INTO "__Collections"
+(collection_id, collection_name, collection_year) VALUES
+(1, 'Diva', 2018),
+ (2, 'Anna', 2009),
+ (3, 'TOP 30 Агутин', 1994),
+ (4, '50 лучших песен Ваенга', 2013);
+
+INSERT INTO "__Tracklist"
+(track_id, track_name, album_id, duration)  VALUES
+(1, 'Романс Здесь хорошо', 1, 4,15),
+(2, 'Ария из оперы Евгений Онегин', 1, 5,10),
+(3, 'Полчаса', 3, 3,45),
+ (4, 'Босоногий мальчик', 5, 4,05),
+ (5, 'Романс Я не оставлю слов', 3, 5,10),
+ (6, 'Безотносительно', 4, 3,5),
+ (7, 'Виски', 2, 3,20);
+
+INSERT INTO "__Music_genres"
+(genre_id, genre_name)
+VALUES (1, 'Шансон'),
+ (2, 'Опера'),
+ (3, 'Поп'),
+ (4, 'Романс');
+
+INSERT INTO "__Genre_performer"
+(genre_id, performer_id)
+VALUES (2, 1),
+ (1, 2),
+ (3, 3),
+ (4, 1),
+ (3, 4),
+ (4, 4),
+ (3, 5);
+INSERT INTO "__Album_performer"
+(album_id, performer_id)
+VALUES (1, 1),
+ (2, 2),
+ (3, 4),
+ (4, 5),
+ (5, 3);
+INSERT INTO "__Collection_track"
+(collection_id, track_id)
+VALUES (1, 2),
+(2, 1),
+ (3, 4),
+ (4, 7);
+	
+
+
+
+
+--2
+
+select track_name ,duration  from "__Tracklist" where duration =(select max(duration ) from "__Tracklist")
+
+select duration  from "__Tracklist" where duration >=3.5
+
+select * from "__Collections" where collection_year  between 2018 and 2020
+
+select name  from "__Performers"  where name not like '% %'
+
+select track_name   from "__Tracklist" where track_name like '%мой%'  OR track_name like '%my%' 
+
+--3.1
+select mg.genre_name ,count(distinct gp.performer_id) from "__Music_genres" mg LEFT join
+"__Genre_performer" gp ON mg.genre_id =gp.genre_id 
+group by mg.genre_name 
+genre_id
+
+--3.2
+select count(t.track_id) from 
+(select * from "__Albums"   where albu_year  between 2017 and 2022 ) a left JOIN 
+"__Tracklist" t ON a.album_id=t.album_id 
+
+--3.3
+select a.album_name ,avg(t.duration) 
+ from "__Albums"   a left JOIN 
+"__Tracklist" t ON a.album_id=t.album_id 
+group by  a.album_name
+ 
+--3.4
+select p.name 
+from 
+(select * from "__Albums" where  albu_year!=2020)  a left JOIN 
+"__Album_performer" ap ON a.album_id =ap.album_id left JOIN 
+"__Performers" p ON ap.performer_id =p.performer_id 
+group by p.name 
+
+--3.5
+select c.collection_name  from 
+(select * from "__Performers"  where name='Анна Нетребко' ) a left JOIN 
+"__Album_performer" ap ON a.performer_id=ap.performer_id Left JOIN 
+"__Tracklist" t ON ap.album_id =t.album_id left JOIN 
+"__Collection_track" ct ON t.track_id =ct.track_id left JOIN 
+"__Collections" c ON ct.collection_id =c.collection_id 
+group by c.collection_name
+
+--4.1
+select a.album_name  from "__Albums" a inner join
+"__Tracklist" t ON a.album_id =t.album_id inner join
+"__Album_performer" ap ON a.album_id =ap.album_id inner JOIN 
+"__Performers" p on ap.performer_id =p.performer_id inner JOIN 
+"__Genre_performer" gp ON p.performer_id =gp.performer_id 
+group by a.album_name
+having count(gp.genre_id)>1
+
+--4.2
+select t.track_name  from "__Collection_track" ct full join
+"__Tracklist" t on ct.track_id =t.track_id 
+where ct.collection_id is null
+
+--4.3
+select p.name  FROM
+(select  *  from "__Tracklist" where duration =(select max(duration ) from "__Tracklist")) t left join
+"__Album_performer" ap ON t.album_id =ap.album_id left JOIN 
+"__Performers" p on ap.performer_id =p.performer_id
+
+--4.4
+select a.album_name  FROM
+(SELECT album_id,count(track_id) from "__Tracklist" 
+group by album_id   
+ having count(track_id)=(select count(track_id) from "__Tracklist" group by album_id order by count(track_id) limit 1)) t left join
+ "__Albums" a ON t.album_id=a.album_id 
+
+
